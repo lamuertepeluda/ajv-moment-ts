@@ -7,7 +7,7 @@ It is a [ajv](https://github.com/epoberezkin/ajv) plugin using [moment](https://
 ## Installing
 
 ```bash
-npm install --save ajv moment ajv-moment
+npm install --save ajv moment ajv-moment-ts
 ```
 
 ## Getting Started
@@ -15,7 +15,7 @@ npm install --save ajv moment ajv-moment
 ```javascript
 import Ajv from 'ajv';
 import { plugin } from 'ajv-moment-ts';
-// or also import plugin from 'ajv-moment-ts';
+// or just: import plugin from 'ajv-moment-ts';
 import moment from 'moment';
 
 // define an ajv instance
