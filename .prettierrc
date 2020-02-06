@@ -2,5 +2,6 @@
   "singleQuote": true,
   "semi": false,
   "useTabs": false,
-  "ignorePath": ".prettierignore"
+  "ignorePath": ".prettierignore",
+  "printWidth": 300
 }
