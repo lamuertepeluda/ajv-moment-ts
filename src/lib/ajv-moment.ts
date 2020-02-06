@@ -2,17 +2,17 @@ import Ajv from 'ajv';
 import moment from 'moment';
 
 const momentFns = Object.keys(moment.fn);
+/* eslint-disable */
+export interface AJVMomentOptions {
+  readonly ajv: Ajv.Ajv;
+  readonly moment: moment.Moment;
+}
 
-export interface IAJVMomentOptions {
-  ajv: Ajv.Ajv;
+export interface AjvMoment extends Ajv.Ajv {
   moment: moment.Moment;
 }
 
-export interface IAjvMoment extends Ajv.Ajv {
-  moment: moment.Moment;
-}
-
-export interface IAJVMomentValue {
+export interface AJVMomentValue {
   format?: string[];
   now?: boolean;
   $data?: string;
@@ -20,16 +20,18 @@ export interface IAJVMomentValue {
   value?: string;
 }
 
-interface IAJVMomentValidationOut {
+interface AJVMomentValidationOut {
   test: string;
-  value: IAJVMomentValue[];
+  value: AJVMomentValue[];
+  format?: string[];
 }
 
-type AJVMomentValidationValue = string | IAJVMomentValue;
+type AJVMomentValidationValue = string | AJVMomentValue;
 
-export interface IAJVMomentValidationIn {
+export interface AJVMomentValidationIn {
   test: string;
   value: AJVMomentValidationValue;
+  format?: string[];
 }
 
 /**
@@ -38,7 +40,7 @@ export interface IAJVMomentValidationIn {
  * @param  {Object} options - plugin options
  * @return {Object} keywordSettings
  */
-function plugin(options: IAJVMomentOptions) {
+function plugin(options: AJVMomentOptions) {
   if (!options || typeof options !== 'object') {
     throw new Error('AjvMoment#plugin requires options');
   }
@@ -49,7 +51,7 @@ function plugin(options: IAJVMomentOptions) {
     throw new Error(`AjvMoment#plugin options requries a 'moment' attribute (moment.js)`);
   }
   const { ajv, moment } = options;
-  (ajv as IAjvMoment).moment = moment;
+  (ajv as AjvMoment).moment = moment;
   const keywordSettings = {
     type: 'string',
     statements: true,
@@ -68,10 +70,10 @@ function inline(it: Ajv.CompilationContext, keyword: string, schema: any): strin
   const err = 'ajvmErrMsg' + it.level;
   const schemaOptions = typeof schema === 'object' ? schema : {};
   const formats = schemaOptions.format || [];
-  const validations: IAJVMomentValidationIn[] = typeof schemaOptions.validate === 'undefined' ? [] : Array.isArray(schemaOptions.validate) ? schemaOptions.validate : [schemaOptions.validate];
+  const validations: AJVMomentValidationIn[] = typeof schemaOptions.validate === 'undefined' ? [] : Array.isArray(schemaOptions.validate) ? schemaOptions.validate : [schemaOptions.validate];
 
   const _validations = validations.map(validation => {
-    const { test, value } = validation;
+    const { test, value, format } = validation;
     if (!test || !momentFns.includes(test)) {
       throw new Error('Invalid validation: "test" is required and must be a valid moment function');
     }
@@ -81,12 +83,14 @@ function inline(it: Ajv.CompilationContext, keyword: string, schema: any): strin
 
     const _value: AJVMomentValidationValue[] = Array.isArray(value) ? value : [value];
 
-    const _validation: IAJVMomentValidationOut = {
+    const _validation: AJVMomentValidationOut = {
       // moment function
       test,
       // output value
-      value: _value.map(function(val): IAJVMomentValue {
-        const _val: IAJVMomentValue = {};
+      value: _value.map(function(val): AJVMomentValue {
+        const _val: AJVMomentValue = {
+          format
+        };
         if (typeof val === 'string') {
           _val.value = JSON.stringify(val);
         } else {
@@ -108,7 +112,8 @@ function inline(it: Ajv.CompilationContext, keyword: string, schema: any): strin
             : [];
         }
         return _val;
-      })
+      }),
+      format
     };
     return _validation;
   });
@@ -193,6 +198,8 @@ function inline(it: Ajv.CompilationContext, keyword: string, schema: any): strin
 
   return templ;
 }
+
+/* eslint-enable */
 
 export default plugin;
 export { plugin };
