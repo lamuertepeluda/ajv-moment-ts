@@ -5,11 +5,11 @@ const momentFns = Object.keys(moment.fn);
 /* eslint-disable */
 export interface AJVMomentOptions {
   readonly ajv: Ajv.Ajv;
-  readonly moment: moment.Moment;
+  readonly moment: typeof moment;
 }
 
 export interface AjvMoment extends Ajv.Ajv {
-  moment: moment.Moment;
+  moment: typeof moment;
 }
 
 export interface AJVMomentValue {
