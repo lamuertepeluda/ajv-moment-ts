@@ -230,6 +230,82 @@ Aside from date string formats, this plugin can also perform additional validati
 ]
 ```
 
+## Pass Test Arguments
+
+The following schema shows how to pass format and testArguments to perform comparison (e.g. `isSame(d, 'year')`)
+
+```json
+{
+  "definitions": {},
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://some-url/mini-schema.json",
+  "type": "object",
+  "title": "Mini Schema for same year - testArgs",
+  "required": ["year"],
+  "additionalProperties": false,
+  "properties": {
+    "year": {
+      "$id": "#/properties/year",
+      "type": "string",
+      "title": "Year (4 digits)",
+      "description": "a valid year string in YYYY format",
+      "default": "",
+      "moment": {
+        "format": ["YYYY"],
+        "validate": [
+          {
+            "test": "isAfter",
+            "value": "1900",
+            "format": ["YYYY"]
+          },
+          {
+            "test": "isBefore",
+            "value": "2999",
+            "format": ["YYYY"]
+          }
+        ]
+      },
+      "examples": ["2020"]
+    },
+    "myOtherDate": {
+      "$id": "#/properties/myOtherDate",
+      "type": "string",
+      "format": "date",
+      "title": "Other date that has to match the year",
+      "default": "",
+      "examples": ["2020-05-18"],
+      "moment": {
+        "validate": [
+          {
+            "test": "isSame",
+            "value": {
+              "$data": "1/year"
+            },
+            "format": ["YYYY"],
+            "testArgs": ["year"]
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+Try evaluating against the following data
+
+```js
+// the error text will be: "isSame(value, ,"year")" validation failed for value(s): 2029-02-18 vs ("2019)"
+const invalidData = {
+  year: '2019',
+  myOtherDate: '2029-02-18'
+};
+
+const validData = {
+  year: '2019',
+  myOtherDate: '2019-02-18'
+};
+```
+
 ## Testing
 
 run all tests

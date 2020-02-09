@@ -20,18 +20,21 @@ export interface AJVMomentValue {
   value?: string;
 }
 
-interface AJVMomentValidationOut {
+interface AJVMomentBaseValidation {
   test: string;
-  value: AJVMomentValue[];
+  // args for moment.isSame etc
+  testArgs?: [moment.unitOfTime.StartOf] | [moment.MomentInput, moment.unitOfTime.StartOf, '()' | '[)' | '(]' | '[]'];
   format?: string[];
+}
+
+interface AJVMomentValidationOut extends AJVMomentBaseValidation {
+  value: AJVMomentValue[];
 }
 
 type AJVMomentValidationValue = string | AJVMomentValue;
 
-export interface AJVMomentValidationIn {
-  test: string;
+export interface AJVMomentValidationIn extends AJVMomentBaseValidation {
   value: AJVMomentValidationValue;
-  format?: string[];
 }
 
 /**
@@ -139,7 +142,8 @@ function inline(it: Ajv.CompilationContext, keyword: string, schema: any): strin
   templ += _validations
     .map(function(validation, i): string {
       const testResult = 'ajvmTestResult_' + it.level + '_' + i;
-
+      // original values from data
+      const origVals: any = [];
       const pieceOfCode: { tval: string; tmpl: string } = {
         tval: '[',
         tmpl: `
@@ -150,10 +154,12 @@ function inline(it: Ajv.CompilationContext, keyword: string, schema: any): strin
         const testVal = 'ajvmTestVal_' + it.level + '_' + i + '_' + ii;
         res.tval += testVal + ',';
         if (val.now === true) {
+          origVals.push(null);
           res.tmpl += `
             const ${testVal} = moment();
             `;
         } else {
+          origVals.push(val.value);
           res.tmpl += `
                   const ${testVal} = moment(${val.value}, ${val.format ? JSON.stringify(val.format) : '[moment.ISO_8601]'});
             `;
@@ -167,14 +173,25 @@ function inline(it: Ajv.CompilationContext, keyword: string, schema: any): strin
         }
         return res;
       }, pieceOfCode);
+      // Add arguments for tests such as isSame(value, 'year')
+      const testArgs = validation.testArgs;
 
-      const testVals = results.tval.slice(0, results.tval.length - 1) + ']';
+      const testArgsStr = Array.isArray(testArgs) ? `,${(testArgs as any[]).map((ta: any): string => (typeof ta === 'string' ? JSON.stringify(ta) : (ta as string))).join(', ')}` : '';
+      const validationTestArgsStr = testArgsStr ? `(value, ${testArgsStr})` : '';
+      const testVals = results.tval.slice(0, results.tval.length - 1) + testArgsStr + ']';
       pieceOfCode.tmpl += `
+                  const dataValues = [${origVals.join(',')}];
                   const ${testResult} = d.${validation.test}.apply(d, ${testVals});
                   if (!${testResult}) {
-                      ${err}.message = '"${validation.test}" validation failed for value(s): ';
-                      ${testVals}.forEach(function(c) {
-                          ${err}.message += ${err}.data + ' (' + c.toISOString() + ')' + ', ';
+                      ${err}.message = '"${validation.test}${validationTestArgsStr}" validation failed for value(s): ';
+                      ${testVals}.forEach(function(c, i) {
+                          if(moment.isMoment(c))
+                          {
+                              const displayFormat = d.creationData().format ? d.creationData().format : moment.ISO_8601;
+                              const dataValue = dataValues[${[i]}];
+                              const erroVal = dataValue === null ? c.format(displayFormat) : dataValue;
+                              ${err}.message += ${err}.data + ' vs ("' + dataValue + ')"' + ', ';
+                          }
                       });
                       ${err}.message = ${err}.message.slice(0, -2);
                       ${valid} = false;
